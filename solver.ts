@@ -27,7 +27,7 @@ function solution(input: string): string {
     q: T[];
     f: number;
     r: number;
-    constructor(q = []) {
+    constructor(q: T[] = []) {
       this.q = q;
       this.f = 0;
       this.r = this.q.length;
@@ -150,6 +150,41 @@ function solution(input: string): string {
       grid[i]?.[j] && grid[i][j].length === 1 ? grid[i][j][0].id : false;
 
     /**
+     * grid[i][j]칸이 확정된 칸이면 그 칸의 N을 반환하는 함수.
+     * @param i 칸의 y좌표
+     * @param j 칸의 x좌표
+     * @param grid
+     * @returns id 혹은 false
+     */
+    const getN = (i: number, j: number, grid: gridType) =>
+      grid[i]?.[j] && grid[i][j].length === 1 ? grid[i][j][0].n : false;
+
+    /**
+     * 확정된 칸의 넓이를 반환하는 함수. 확정된 칸이 아니라면 false
+     * @param i 칸의 y좌표
+     * @param j 칸의 x좌표
+     * @param grid
+     * @returns number 또는 false
+     */
+    const getArea = (i: number, j: number, grid: gridType) => {
+      const targetId = getId(i, j, grid);
+      if (targetId === false) return false;
+      const q = new Queue<[number, number]>([[i, j]]);
+      const visited = new Visited(i, j);
+      while (q.size()) {
+        const [y, x] = q.pop();
+        moves.forEach((m) => {
+          const [my, mx] = [y + m[0], x + m[1]];
+          if (getId(my, mx, grid) === targetId && !visited.has(my, mx)) {
+            q.push([my, mx]);
+            visited.push(my, mx);
+          }
+        });
+      }
+      return visited.area();
+    };
+
+    /**
      * 숫자와 숫자 사이를 바다로 확정해주는 함수
      * @param grid
      * @returns 변한 숫자가 있으면 true
@@ -213,6 +248,50 @@ function solution(input: string): string {
       }
       return bool;
     }
+
+    /**
+     * 입력받은 칸이 완성되었으면 주변을 둘러주는 함수
+     * @param i 칸의 y좌표
+     * @param j 칸의 x좌표
+     */
+    function sol3(
+      i: number,
+      j: number,
+      grid: gridType,
+      iniGrid: iniGridType
+    ): boolean {
+      const targetId = getId(i, j, grid);
+      const targetN = getN(i, j, grid);
+      if (targetId === false || targetN === false) return false;
+      const a = getArea(i, j, grid);
+      // 오류 검출용 코드
+      if (typeof a === "number" && a > targetN) throw new Error("sol3");
+      if (a !== targetN) return false;
+      const q = new Queue<[number, number]>([[i, j]]);
+      const visited = new Visited(i, j);
+      while (q.size()) {
+        const [y, x] = q.pop();
+        moves.forEach((m) => {
+          const [my, mx] = [y + m[0], x + m[1]];
+          if (grid[my]?.[mx]) {
+            if (getId(my, mx, grid) === targetId && !visited.has(my, mx)) {
+              q.push([my, mx]);
+              visited.push(my, mx);
+            } else {
+              grid[my][mx] = [new Num(0, 0)];
+            }
+          }
+        });
+      }
+      return true;
+    }
+
+    /**
+     * 거리가 안 닿는 숫자들의 가능성을 제거하는 함수
+     * @param grid
+     * @param iniGrid
+     */
+    function sol4(grid: gridType, iniGrid: iniGridType): boolean {}
 
     function cycle(grid: gridType, iniGrid: iniGridType): boolean {}
     function pByC(grid: gridType, iniGrid: iniGridType): void {}
