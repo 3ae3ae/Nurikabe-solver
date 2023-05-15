@@ -118,7 +118,7 @@ function solution(input) {
                             !visited.has(my, mx) &&
                             grid[my][mx].some((xx) => xx.id === 0)) {
                             q.push([my, mx, md]);
-                            grid[my][mx].push(target);
+                            grid[my][mx].push(new Num(target.n, target.id));
                             visited.push(my, mx);
                         }
                     });
@@ -255,7 +255,7 @@ function solution(input) {
          */
         function sol2Extra(grid) {
             let bool = false;
-            const sol2Grid = grid.map((a) => a.map((b) => 0));
+            const sol2Grid = grid.map((a) => a.map(() => 0));
             for (let i = 0; i < grid.length; i++) {
                 for (let j = 0; j < grid[0].length; j++) {
                     const targetId = getId(i, j, grid);
@@ -299,7 +299,7 @@ function solution(input) {
         function sol3(i, j, grid, iniGrid) {
             const targetId = getId(i, j, grid);
             const targetN = getN(i, j, grid);
-            if (targetId === false || targetN === false)
+            if (targetId === 0 || targetId === false || targetN === false)
                 return false;
             const a = getArea(i, j, grid);
             // 오류 검출용 코드
@@ -318,7 +318,7 @@ function solution(input) {
                             q.push([my, mx]);
                             visited.push(my, mx);
                         }
-                        else {
+                        else if (!visited.has(my, mx)) {
                             grid[my][mx] = [new Num(0, 0)];
                         }
                     }
@@ -362,7 +362,7 @@ function solution(input) {
                 [
                     [0, 1],
                     [1, 1],
-                    [1, 1],
+                    [1, 0],
                 ],
                 [
                     [0, -1],
@@ -440,20 +440,21 @@ function solution(input) {
                 const q = new Queue([[i, j]]);
                 const visited = new Visited(i, j);
                 while (q.size()) {
+                    const [y, x] = q.pop();
                     moves.forEach((m) => {
-                        const [mi, mj] = [i + m[0], j + m[1]];
-                        if (grid[mi]?.[mj] &&
-                            !visited.has(mi, mj) &&
-                            grid[mi][mj].some((xx) => xx.id === target.id)) {
-                            q.push([mi, mj]);
-                            visited.push(mi, mj);
+                        const [my, mx] = [y + m[0], x + m[1]];
+                        if (grid[my]?.[mx] &&
+                            !visited.has(my, mx) &&
+                            grid[my][mx].some((xx) => xx.id === target.id)) {
+                            q.push([my, mx]);
+                            visited.push(my, mx);
                         }
                     });
                 }
                 if (visited.area() === target.n) {
                     bool = true;
                     for (const [y, x] of visited.entries()) {
-                        grid[y][x] = [target];
+                        grid[y][x] = [new Num(target.n, target.id)];
                     }
                 }
             }
@@ -558,39 +559,48 @@ function solution(input) {
                 }
                 return false;
             }
-            const ban = [];
-            while (true) {
-                const index = grid
-                    .flat(1)
-                    .findIndex((value, i) => value.length === 2 && !ban.includes(i));
-                let [i, j] = [0, 0];
-                if (index === -1) {
-                    for (; i < grid.length &&
-                        (grid[i]?.[j]?.length === 1 ||
-                            ban.includes(i * grid[i].length + j)); i++) {
-                        for (; j < grid[0].length &&
-                            (grid[i]?.[j]?.length === 1 ||
-                                ban.includes(i * grid[i].length + j)); j++)
-                            ;
-                        if (grid[i]?.[j]?.length !== 1 &&
-                            !ban.includes(i * grid[i].length + j))
-                            break;
-                    }
+            const len2 = new Visited();
+            const others = new Visited();
+            for (let i = 0; i < grid.length; i++) {
+                for (let j = 0; j < grid[0].length; j++) {
+                    if (grid[i][j].length === 2)
+                        len2.push(i, j);
+                    if (grid[i][j].length > 2)
+                        others.push(i, j);
                 }
-                else
-                    [i, j] = [Math.floor(index / grid[0].length), index % grid[0].length];
-                for (const target of grid[i][j]) {
-                    const tempGrid = JSON.parse(JSON.stringify(grid));
-                    tempGrid[i][j] = [{ ...target }];
-                    cycle(tempGrid, iniGrid, idToPos);
-                    cycle(tempGrid, iniGrid, idToPos);
-                    if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
-                        grid[i][j] = grid[i][j].filter((xx) => xx.id !== target.id);
-                        return;
-                    }
-                }
-                ban.push(i * grid[0].length + j);
             }
+            if (len2.area()) {
+                for (const [y, x] of len2.entries()) {
+                    for (const target of grid[y][x]) {
+                        const tempGrid = JSON.parse(JSON.stringify(grid));
+                        tempGrid[y][x] = [new Num(target.n, target.id)];
+                        cycle(tempGrid, iniGrid, idToPos);
+                        cycle(tempGrid, iniGrid, idToPos);
+                        cycle(tempGrid, iniGrid, idToPos);
+                        if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
+                            grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
+                            return;
+                        }
+                    }
+                }
+            }
+            if (others.area()) {
+                for (const [y, x] of others.entries()) {
+                    for (const target of grid[y][x]) {
+                        const tempGrid = JSON.parse(JSON.stringify(grid));
+                        tempGrid[y][x] = [new Num(target.n, target.id)];
+                        cycle(tempGrid, iniGrid, idToPos);
+                        cycle(tempGrid, iniGrid, idToPos);
+                        cycle(tempGrid, iniGrid, idToPos);
+                        if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
+                            grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
+                            return;
+                        }
+                    }
+                }
+            }
+            console.log([len2.area(), others.area()]);
+            throw new Error("pByc");
         }
         const solved = (grid) => grid.every((a) => a.every((b) => b.length === 1));
         while (!solved(grid)) {
@@ -605,5 +615,5 @@ function solution(input) {
     const returnString = Array.from({ length: grids.length }, (_, i) => solve(grids[i], iniGrids[i], idToPos)).join("\n\n");
     return returnString;
 }
-solution(input);
+console.log(solution(input));
 console.timeEnd();

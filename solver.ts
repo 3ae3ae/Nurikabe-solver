@@ -141,7 +141,7 @@ function solution(input: string): string {
               grid[my][mx].some((xx) => xx.id === 0)
             ) {
               q.push([my, mx, md]);
-              grid[my][mx].push(target);
+              grid[my][mx].push(new Num(target.n, target.id));
               visited.push(my, mx);
             }
           });
@@ -292,7 +292,7 @@ function solution(input: string): string {
      */
     function sol2Extra(grid: gridType) {
       let bool = false;
-      const sol2Grid = grid.map((a) => a.map((b) => 0));
+      const sol2Grid = grid.map((a) => a.map(() => 0));
       for (let i = 0; i < grid.length; i++) {
         for (let j = 0; j < grid[0].length; j++) {
           const targetId = getId(i, j, grid);
@@ -343,7 +343,8 @@ function solution(input: string): string {
     ): boolean {
       const targetId = getId(i, j, grid);
       const targetN = getN(i, j, grid);
-      if (targetId === false || targetN === false) return false;
+      if (targetId === 0 || targetId === false || targetN === false)
+        return false;
       const a = getArea(i, j, grid);
       // 오류 검출용 코드
       if (typeof a === "number" && a > targetN) throw new Error("sol3");
@@ -358,7 +359,7 @@ function solution(input: string): string {
             if (getId(my, mx, grid) === targetId && !visited.has(my, mx)) {
               q.push([my, mx]);
               visited.push(my, mx);
-            } else {
+            } else if (!visited.has(my, mx)) {
               grid[my][mx] = [new Num(0, 0)];
             }
           }
@@ -400,7 +401,7 @@ function solution(input: string): string {
         [
           [0, 1],
           [1, 1],
-          [1, 1],
+          [1, 0],
         ], // 좌상단
         [
           [0, -1],
@@ -481,22 +482,23 @@ function solution(input: string): string {
         const q = new Queue<[number, number]>([[i, j]]);
         const visited = new Visited(i, j);
         while (q.size()) {
+          const [y, x] = q.pop();
           moves.forEach((m) => {
-            const [mi, mj] = [i + m[0], j + m[1]];
+            const [my, mx] = [y + m[0], x + m[1]];
             if (
-              grid[mi]?.[mj] &&
-              !visited.has(mi, mj) &&
-              grid[mi][mj].some((xx) => xx.id === target.id)
+              grid[my]?.[mx] &&
+              !visited.has(my, mx) &&
+              grid[my][mx].some((xx) => xx.id === target.id)
             ) {
-              q.push([mi, mj]);
-              visited.push(mi, mj);
+              q.push([my, mx]);
+              visited.push(my, mx);
             }
           });
         }
         if (visited.area() === target.n) {
           bool = true;
           for (const [y, x] of visited.entries()) {
-            grid[y][x] = [target];
+            grid[y][x] = [new Num(target.n, target.id)];
           }
         }
       }
@@ -615,48 +617,46 @@ function solution(input: string): string {
         return false;
       }
 
-      const ban: number[] = [];
-
-      while (true) {
-        const index = grid
-          .flat(1)
-          .findIndex((value, i) => value.length === 2 && !ban.includes(i));
-        let [i, j]: [number, number] = [0, 0];
-        if (index === -1) {
-          for (
-            ;
-            i < grid.length &&
-            (grid[i]?.[j]?.length === 1 ||
-              ban.includes(i * grid[i].length + j));
-            i++
-          ) {
-            for (
-              ;
-              j < grid[0].length &&
-              (grid[i]?.[j]?.length === 1 ||
-                ban.includes(i * grid[i].length + j));
-              j++
-            );
-            if (
-              grid[i]?.[j]?.length !== 1 &&
-              !ban.includes(i * grid[i].length + j)
-            )
-              break;
-          }
-        } else
-          [i, j] = [Math.floor(index / grid[0].length), index % grid[0].length];
-        for (const target of grid[i][j]) {
-          const tempGrid: gridType = JSON.parse(JSON.stringify(grid));
-          tempGrid[i][j] = [{ ...target }];
-          cycle(tempGrid, iniGrid, idToPos);
-          cycle(tempGrid, iniGrid, idToPos);
-          if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
-            grid[i][j] = grid[i][j].filter((xx) => xx.id !== target.id);
-            return;
+      const len2 = new Visited();
+      const others = new Visited();
+      for (let i = 0; i < grid.length; i++) {
+        for (let j = 0; j < grid[0].length; j++) {
+          if (grid[i][j].length === 2) len2.push(i, j);
+          if (grid[i][j].length > 2) others.push(i, j);
+        }
+      }
+      if (len2.area()) {
+        for (const [y, x] of len2.entries()) {
+          for (const target of grid[y][x]) {
+            const tempGrid = JSON.parse(JSON.stringify(grid));
+            tempGrid[y][x] = [new Num(target.n, target.id)];
+            cycle(tempGrid, iniGrid, idToPos);
+            cycle(tempGrid, iniGrid, idToPos);
+            cycle(tempGrid, iniGrid, idToPos);
+            if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
+              grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
+              return;
+            }
           }
         }
-        ban.push(i * grid[0].length + j);
       }
+      if (others.area()) {
+        for (const [y, x] of others.entries()) {
+          for (const target of grid[y][x]) {
+            const tempGrid = JSON.parse(JSON.stringify(grid));
+            tempGrid[y][x] = [new Num(target.n, target.id)];
+            cycle(tempGrid, iniGrid, idToPos);
+            cycle(tempGrid, iniGrid, idToPos);
+            cycle(tempGrid, iniGrid, idToPos);
+            if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
+              grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
+              return;
+            }
+          }
+        }
+      }
+      console.log([len2.area(), others.area()]);
+      throw new Error("pByc");
     }
 
     const solved = (grid: gridType): boolean =>
@@ -676,6 +676,6 @@ function solution(input: string): string {
   ).join("\n\n");
   return returnString;
 }
-solution(input);
+console.log(solution(input));
 
 console.timeEnd();
