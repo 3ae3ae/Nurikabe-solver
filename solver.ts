@@ -17,9 +17,11 @@ function solution(input: string): string {
     static id = 1;
     id: number;
     n: number;
+    approach: number;
     constructor(n = 0, id = Num.id++) {
       this.n = n;
       this.id = id;
+      this.approach = 0;
     }
   }
 
@@ -72,6 +74,12 @@ function solution(input: string): string {
 
     area() {
       return [...this.visited.values()].reduce((a, c) => a + c.size, 0);
+    }
+
+    entries() {
+      return [...this.visited.keys()].flatMap((y) =>
+        [...this.visited.get(y)!.keys()].map((x) => [y, x])
+      );
     }
   }
 
@@ -404,6 +412,71 @@ function solution(input: string): string {
       return bool;
     }
 
+    /**
+     * 확정된 숫자칸 주변에 그 숫자랑 0만 올 수 있게 하는 함수
+     * @param grid
+     * @returns 변화된 숫자가 있으면 true
+     */
+    function sol6(grid: gridType): boolean {
+      let bool = false;
+      for (let i = 0; i < grid.length; i++) {
+        for (let j = 0; j < grid[0].length; j++) {
+          const targetId = getId(i, j, grid);
+          if (
+            targetId !== false &&
+            targetId !== 0 &&
+            grid[i][j][0].approach === 0
+          ) {
+            bool = true;
+            grid[i][j][0].approach = 1;
+            moves.forEach((m) => {
+              const [mi, mj] = [i + m[0], j + m[1]];
+              if (grid[mi]?.[mj])
+                grid[mi][mj] = grid[mi][mj].filter(
+                  (xx) => xx.id === 0 || xx.id === targetId
+                );
+            });
+          }
+        }
+      }
+      return bool;
+    }
+
+    /**
+     * 숫자에게 허용된 공간과 숫자 요구치가 딱 맞으면 공간을 숫자로 가득 채우는 함수
+     * @param grid
+     * @param iniGrid
+     */
+    function sol7(grid: gridType, iniGrid: iniGridType): boolean {
+      let bool = false;
+      for (const [[i, j], target] of iniGrid) {
+        if (getArea(i, j, grid) === target.n) continue; // 수정 필요
+        const q = new Queue<[number, number]>([[i, j]]);
+        const visited = new Visited(i, j);
+        while (q.size()) {
+          moves.forEach((m) => {
+            const [mi, mj] = [i + m[0], j + m[1]];
+            if (
+              grid[mi]?.[mj] &&
+              grid[mi][mj].some((xx) => xx.id === target.id)
+            ) {
+              q.push([mi, mj]);
+              visited.push(mi, mj);
+            }
+          });
+        }
+        if (visited.area() === target.n) {
+          bool = true;
+          for (const [y, x] of visited.entries()) {
+            grid[y][x] = [target];
+          }
+        }
+      }
+      return bool;
+    }
+
+    //sol8: 최대거리, 사각형, 가능성 제거
+
     function cycle(grid: gridType, iniGrid: iniGridType): boolean {}
     function pByC(grid: gridType, iniGrid: iniGridType): void {}
     const solved = (grid: gridType): boolean =>
@@ -416,7 +489,6 @@ function solution(input: string): string {
     );
     for (const [[y, x], target] of iniGrid) numList[y][x] = target.n.toString();
     return numList.map((v) => v.join("")).join("\n");
-    //sol8: 최대거리, 사각형, 가능성 제거
   }
 
   const returnString = Array.from({ length: grids.length }, (_, i) =>
