@@ -25,12 +25,28 @@ const input = `3 4
 1......1....4..
 ..........6....
 .2.1.2.........
+24 14
+2....1.......1......2...
+........2...3....1......
+.....1.......1..3......6
+.1......5...............
+......4......1........3.
+...............7.7.3....
+.....2..................
+..9.....................
+.7.1...4.....2....1.....
+..........5.........1...
+...4.4.............2....
+....8.................7.
+......1......5....11....5
+........6.2.....5.......
 2 4
 .2
 ..
 ..
 4.
 0 0`;
+
 // 24 14
 // 2....1.......1......2...
 // ........2...3....1......
@@ -706,6 +722,44 @@ function solution(input: string): string {
         return false;
       }
 
+      /**
+       * 서로 안 닿는 숫자가 있으면 true
+       */
+      function check5(grid: gridType, iniGrid: iniGridType) {
+        /**
+         * L에서 n개씩 뽑는 조합을 뱉는 함수
+         */
+        function combination<T>(L: T[], n: number) {
+          if (n === 1) {
+            return L.map((l) => [l]);
+          }
+          let retrn: T[][] = [];
+          L.forEach((l, i, L) => {
+            const rest = L.filter((_, j) => j > i);
+            const comb = combination(rest, n - 1);
+            const result = comb.map((c) => [l, ...c]);
+            retrn.push(...result);
+          });
+          return retrn;
+        }
+        for (const [[_, __], target] of iniGrid) {
+          const targetPos = grid.flatMap((v, i, grid) =>
+            v.reduce(
+              (a: number[][], c, j) =>
+                getId(i, j, grid) === target.id ? (a.push([i, j]), a) : a,
+              []
+            )
+          );
+          const comb = combination(targetPos, 2);
+          for (const [[i, j], [k, l]] of comb) {
+            const d = getDistance(i, j, k, l, grid);
+            if (!d) return true;
+            if (d > target.n) return true;
+          }
+        }
+        return false;
+      }
+
       const len2 = new Visited();
       const others = new Visited();
       for (let i = 0; i < grid.length; i++) {
@@ -726,7 +780,8 @@ function solution(input: string): string {
                 check1(tempGrid) ||
                 check2(tempGrid) ||
                 check3(tempGrid) ||
-                check4(tempGrid, iniGrid)
+                check4(tempGrid, iniGrid) ||
+                check5(tempGrid, iniGrid)
               ) {
                 grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
                 return;
@@ -750,7 +805,8 @@ function solution(input: string): string {
                 check1(tempGrid) ||
                 check2(tempGrid) ||
                 check3(tempGrid) ||
-                check4(tempGrid, iniGrid)
+                check4(tempGrid, iniGrid) ||
+                check5(tempGrid, iniGrid)
               ) {
                 grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
                 return;
