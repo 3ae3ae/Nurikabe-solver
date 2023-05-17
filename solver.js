@@ -1,5 +1,4 @@
 // const input = require('fs').readFileSync('/dev/stdin').toString().trim();
-console.time();
 const input = `3 4
 3...
 ....
@@ -26,7 +25,27 @@ const input = `3 4
 1......1....4..
 ..........6....
 .2.1.2.........
+2 4
+.2
+..
+..
+4.
 0 0`;
+// 24 14
+// 2....1.......1......2...
+// ........2...3....1......
+// .....1.......1..3......6
+// .1......5...............
+// ......4......1........3.
+// ...............7.7.3....
+// .....2..................
+// ..9.....................
+// .7.1...4.....2....1.....
+// ..........5.........1...
+// ...4.4.............2....
+// ....8.................7.
+// ......1......5....11....5
+// ........6.2.....5.......
 function solution(input) {
     class Num {
         static id = 1;
@@ -114,8 +133,6 @@ function solution(input) {
                 if (grids[i][y][x][0].id !== 0)
                     iniGrids[i].push([[y, x], grids[i][y][x][0]]);
     }
-    const idToPos = new Map();
-    iniGrids.forEach((x) => x.forEach((y) => idToPos.set(y[1].id, y[0])));
     (function initialize(grids, iniGrids) {
         grids.forEach((grid, i) => {
             const iniGrid = iniGrids[i];
@@ -142,7 +159,7 @@ function solution(input) {
             }
         });
     })(grids, iniGrids);
-    function solve(grid, iniGrid, idToPos) {
+    function solve(grid, iniGrid) {
         /**
          * grid[i][j]칸이 확정된 칸이면 그 칸의 id를 반환하는 함수.
          * @returns id 혹은 false
@@ -349,8 +366,7 @@ function solution(input) {
                 return false;
             const a = getArea(i, j, grid);
             // 오류 검출용 코드
-            if (typeof a === "number" && a > targetN)
-                throw new Error("sol3");
+            //if (typeof a === "number" && a > targetN) throw new Error("sol3");
             if (a !== targetN)
                 return false;
             const q = new Queue([[i, j]]);
@@ -523,7 +539,7 @@ function solution(input) {
             }
             return bool;
         }
-        function cycle(grid, iniGrid, idToPos) {
+        function cycle(grid, iniGrid) {
             return (sol1(grid) ||
                 sol2(grid) ||
                 sol2Extra(grid) ||
@@ -596,10 +612,10 @@ function solution(input) {
              */
             function check3(grid) {
                 for (let i = 0; i < grid.length; i++) {
-                    for (let j = 0; j < grid.length; j++) {
+                    for (let j = 0; j < grid[0].length; j++) {
                         const targetId = getId(i, j, grid);
                         const targetN = getN(i, j, grid);
-                        if (targetId === false || targetN === false)
+                        if (!targetId || !targetN)
                             continue;
                         const q = new Queue([[i, j]]);
                         const visited = new Visited(i, j);
@@ -649,7 +665,9 @@ function solution(input) {
                     for (const target of grid[y][x]) {
                         const tempGrid = JSON.parse(JSON.stringify(grid));
                         tempGrid[y][x] = [new Num(target.n, target.id)];
-                        while (cycle(tempGrid, iniGrid, idToPos)) {
+                        let n = true;
+                        while (n) {
+                            n = cycle(tempGrid, iniGrid);
                             if (check1(tempGrid) ||
                                 check2(tempGrid) ||
                                 check3(tempGrid) ||
@@ -664,9 +682,15 @@ function solution(input) {
             if (others.area()) {
                 for (const [y, x] of others.entries()) {
                     for (const target of grid[y][x]) {
+                        if (y === 11 && x === 17) {
+                            if (y === 11 && x === 17)
+                                0;
+                        }
                         const tempGrid = JSON.parse(JSON.stringify(grid));
                         tempGrid[y][x] = [new Num(target.n, target.id)];
-                        while (cycle(tempGrid, iniGrid, idToPos)) {
+                        let n = true;
+                        while (n) {
+                            n = cycle(tempGrid, iniGrid);
                             if (check1(tempGrid) ||
                                 check2(tempGrid) ||
                                 check3(tempGrid) ||
@@ -683,7 +707,7 @@ function solution(input) {
         }
         const solved = (grid) => grid.every((a) => a.every((b) => b.length === 1));
         while (!solved(grid)) {
-            if (!cycle(grid, iniGrid, idToPos))
+            if (!cycle(grid, iniGrid))
                 pByC(grid, iniGrid);
         }
         const numList = grid.map((v) => v.map((x) => (x[0].id == 0 ? "#" : ".")));
@@ -691,8 +715,7 @@ function solution(input) {
             numList[y][x] = target.n.toString();
         return numList.map((v) => v.join("")).join("\n");
     }
-    const returnString = Array.from({ length: grids.length }, (_, i) => solve(grids[i], iniGrids[i], idToPos)).join("\n\n");
+    const returnString = Array.from({ length: grids.length }, (_, i) => solve(grids[i], iniGrids[i])).join("\n\n");
     return returnString;
 }
 console.log(solution(input));
-console.timeEnd();
