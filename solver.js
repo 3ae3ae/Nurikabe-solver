@@ -365,8 +365,6 @@ function solution(input) {
             if (targetId === 0 || targetId === false || targetN === false)
                 return false;
             const a = getArea(i, j, grid);
-            // 오류 검출용 코드
-            //if (typeof a === "number" && a > targetN) throw new Error("sol3");
             if (a !== targetN)
                 return false;
             const q = new Queue([[i, j]]);
