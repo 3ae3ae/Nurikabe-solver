@@ -400,10 +400,10 @@ function solution(input) {
                         const targetN = target.n;
                         if (targetId === 0)
                             continue;
-                        if (!sol4Map.has(target.id)) {
+                        if (!sol4Map.has(targetId)) {
                             const count = grid.reduce((a, c, i, grid) => a +
                                 c.reduce((a, _, j) => a + (getId(i, j, grid) === targetId ? 1 : 0), 0), 0);
-                            sol4Map.set(target.id, count);
+                            sol4Map.set(targetId, count);
                         }
                         const q = new Queue([[k, l, targetN]]);
                         const visited = new Visited(k, l);
@@ -427,6 +427,12 @@ function solution(input) {
                         if (sol4Map.get(target.id) !== count2) {
                             bool = true;
                             grid[k][l] = grid[k][l].filter((xx) => xx.id !== targetId);
+                            const id = getId(k, l, grid);
+                            if (id) {
+                                const count = grid.reduce((a, c, i, grid) => a +
+                                    c.reduce((a, _, j) => a + (getId(i, j, grid) === id ? 1 : 0), 0), 0);
+                                sol4Map.set(id, count);
+                            }
                         }
                     }
                 }
