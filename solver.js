@@ -249,18 +249,47 @@ function solution(input) {
             return bool;
         }
         /**
-         * 바다 1칸이 확장할 수 있는 방향이 하나뿐이면 그 방향으로 확장
+         * 전체가 아닌 바다가 확장할 수 있는 방향이 하나뿐이면 그 방향으로 확장
          */
         function sol2(grid) {
             let bool = false;
+            const sol2Grid = grid.map((a) => a.map(() => 0));
             for (let i = 0; i < grid.length; i++) {
-                for (let j = 0; j < grid[i].length; j++) {
-                    if (getId(i, j, grid) === 0) {
-                        const v = moves.filter((m) => grid[i + m[0]]?.[j + m[1]]?.some((xx) => xx.id === 0));
-                        if (v.length === 1 && getId(i + v[0][0], j + v[0][1], grid) !== 0) {
-                            bool = true;
-                            grid[i + v[0][0]][j + v[0][1]] = [new Num(0, 0)];
-                        }
+                for (let j = 0; j < grid[0].length; j++) {
+                    const targetId = getId(i, j, grid);
+                    if (targetId !== 0 || sol2Grid[i][j] === 1)
+                        continue;
+                    const count = grid.reduce((a, c, i, grid) => a +
+                        c.reduce((a, _, j) => a + (getId(i, j, grid) === 0 ? 1 : 0), 0), 0);
+                    // count 수정 필요
+                    if (getArea(i, j, grid) === count)
+                        continue;
+                    const q = new Queue([[i, j]]);
+                    const visited = new Visited(i, j);
+                    const around = new Visited();
+                    while (q.size()) {
+                        const [y, x] = q.pop();
+                        sol2Grid[y][x] = 1;
+                        moves.forEach((m) => {
+                            const [my, mx] = [y + m[0], x + m[1]];
+                            if (grid[my]?.[mx] &&
+                                !visited.has(my, mx) &&
+                                getId(my, mx, grid) === 0) {
+                                q.push([my, mx]);
+                                visited.push(my, mx);
+                            }
+                            else if (grid[my]?.[mx] &&
+                                !visited.has(my, mx) &&
+                                !around.has(my, mx) &&
+                                grid[my][mx].some((xx) => xx.id === 0)) {
+                                around.push(my, mx);
+                            }
+                        });
+                    }
+                    if (around.area() === 1) {
+                        bool = true;
+                        const [y, x] = around.entries()[0];
+                        grid[y][x] = [new Num(0, 0)];
                     }
                 }
             }
