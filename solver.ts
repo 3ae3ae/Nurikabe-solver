@@ -11,6 +11,22 @@ const input = `3 4
 .....
 .....
 ..4.3
+15 15
+.....1...2.1.1.
+...............
+..3....2..2...3
+.....4..1......
+............3..
+.....1....1....
+...........1...
+..5.2.1.5.2.2..
+...4...........
+...............
+..10....2....3..
+......8..4.....
+1......1....4..
+..........6....
+.2.1.2.........
 0 0`;
 function solution(input: string): string {
   class Num {
@@ -297,7 +313,7 @@ function solution(input: string): string {
         for (let j = 0; j < grid[0].length; j++) {
           const targetId = getId(i, j, grid);
           const targetN = getN(i, j, grid);
-          if (!targetId || !targetN || sol2Grid[i][j] === 0) continue;
+          if (!targetId || !targetN || sol2Grid[i][j] === 1) continue;
           if (getArea(i, j, grid) === targetN) continue;
           const q = new Queue<[number, number]>([[i, j]]);
           const visited = new Visited(i, j);
@@ -317,6 +333,7 @@ function solution(input: string): string {
               } else if (
                 grid[my]?.[mx] &&
                 !around.has(my, mx) &&
+                !visited.has(my, mx) &&
                 grid[my][mx].some((xx) => xx.id === targetId)
               )
                 around.push(my, mx);
@@ -335,12 +352,7 @@ function solution(input: string): string {
     /**
      * 입력받은 칸이 완성되었으면 주변을 둘러주는 함수
      */
-    function sol3(
-      i: number,
-      j: number,
-      grid: gridType,
-      iniGrid: iniGridType
-    ): boolean {
+    function sol3(i: number, j: number, grid: gridType): boolean {
       const targetId = getId(i, j, grid);
       const targetN = getN(i, j, grid);
       if (targetId === 0 || targetId === false || targetN === false)
@@ -371,20 +383,46 @@ function solution(input: string): string {
     /**
      * 거리가 안 닿는 숫자들의 가능성을 제거하는 함수
      */
-    function sol4(grid: gridType, iniGrid: iniGridType, idToPos: iTp): boolean {
+    function sol4(grid: gridType): boolean {
       let bool = false;
       for (let k = 0; k < grid.length; k++) {
         for (let l = 0; l < grid[k].length; l++) {
           if (grid[k][l].length === 1) continue;
           for (const target of grid[k][l]) {
-            if (target.id === 0) continue;
-            if (!idToPos.has(target.id)) throw new Error("sol4");
-            const [i, j] = idToPos.get(target.id)!;
-            const d = getDistance(i, j, k, l, grid);
-            if (!d || d > target.n) {
+            const targetId = target.id;
+            const targetN = target.n;
+            if (targetId === 0) continue;
+            const count1 = grid.reduce(
+              (a, c, i, grid) =>
+                a +
+                c.reduce(
+                  (a, _, j) => a + (getId(i, j, grid) === targetId ? 1 : 0),
+                  0
+                ),
+              0
+            );
+            const q = new Queue<[number, number, number]>([[k, l, targetN]]);
+            const visited = new Visited(k, l);
+            let count2 = 0;
+            while (q.size()) {
+              const [y, x, d] = q.pop();
+              if (getId(y, x, grid) === targetId) count2++;
+              if (d === 1) continue;
+              moves.forEach((m) => {
+                const [my, mx] = [y + m[0], x + m[1]];
+                if (
+                  grid[my]?.[mx] &&
+                  !visited.has(my, mx) &&
+                  grid[my][mx].some((xx) => xx.id === targetId)
+                ) {
+                  q.push([my, mx, d - 1]);
+                  visited.push(my, mx);
+                }
+              });
+            }
+            if (count1 !== count2) {
               bool = true;
-              grid[k][l] = grid[k][l].filter((xx) => xx.id !== target.id);
-              if (getId(k, l, grid)) sol3(k, l, grid, iniGrid);
+              grid[k][l] = grid[k][l].filter((xx) => xx.id !== targetId);
             }
           }
         }
@@ -395,7 +433,7 @@ function solution(input: string): string {
     /**
      * L자형 바다의 안쪽을 숫자로 확정시켜주는 함수
      */
-    function sol5(grid: gridType, iniGrid: iniGridType): boolean {
+    function sol5(grid: gridType): boolean {
       let bool = false;
       const L = [
         [
@@ -433,7 +471,7 @@ function solution(input: string): string {
             ) {
               bool = true;
               grid[i][j] = grid[i][j].filter((xx) => xx.id !== 0);
-              if (getId(i, j, grid)) sol3(i, j, grid, iniGrid);
+              if (getId(i, j, grid)) sol3(i, j, grid);
               break;
             }
           }
@@ -445,7 +483,7 @@ function solution(input: string): string {
     /**
      * 확정된 숫자칸 주변에 그 숫자랑 0만 올 수 있게 하는 함수
      */
-    function sol6(grid: gridType, iniGrid: iniGridType): boolean {
+    function sol6(grid: gridType): boolean {
       let bool = false;
       for (let i = 0; i < grid.length; i++) {
         for (let j = 0; j < grid[0].length; j++) {
@@ -463,7 +501,7 @@ function solution(input: string): string {
                 grid[mi][mj] = grid[mi][mj].filter(
                   (xx) => xx.id === 0 || xx.id === targetId
                 );
-                if (getId(mi, mj, grid)) sol3(mi, mj, grid, iniGrid);
+                if (getId(mi, mj, grid)) sol3(mi, mj, grid);
               }
             });
           }
@@ -505,8 +543,6 @@ function solution(input: string): string {
       return bool;
     }
 
-    //sol8: 최대거리, 사각형, 가능성 제거
-
     function cycle(
       grid: gridType,
       iniGrid: iniGridType,
@@ -516,10 +552,10 @@ function solution(input: string): string {
         sol1(grid) ||
         sol2(grid) ||
         sol2Extra(grid) ||
-        sol4(grid, iniGrid, idToPos) ||
-        sol5(grid, iniGrid) ||
-        sol6(grid, iniGrid) ||
-        sol7(grid, iniGrid)
+        sol5(grid) ||
+        sol6(grid) ||
+        sol7(grid, iniGrid) ||
+        sol4(grid)
       );
     }
 
@@ -617,6 +653,18 @@ function solution(input: string): string {
         return false;
       }
 
+      /**
+       * 공간이 넘치는 숫자가 있으면 true
+       */
+      function check4(grid: gridType, iniGrid: iniGridType) {
+        for (const [[i, j], target] of iniGrid) {
+          const a = getArea(i, j, grid);
+          if (!a) throw new Error("check4");
+          if (a > target.n) return true;
+        }
+        return false;
+      }
+
       const len2 = new Visited();
       const others = new Visited();
       for (let i = 0; i < grid.length; i++) {
@@ -630,12 +678,16 @@ function solution(input: string): string {
           for (const target of grid[y][x]) {
             const tempGrid = JSON.parse(JSON.stringify(grid));
             tempGrid[y][x] = [new Num(target.n, target.id)];
-            cycle(tempGrid, iniGrid, idToPos);
-            cycle(tempGrid, iniGrid, idToPos);
-            cycle(tempGrid, iniGrid, idToPos);
-            if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
-              grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
-              return;
+            while (cycle(tempGrid, iniGrid, idToPos)) {
+              if (
+                check1(tempGrid) ||
+                check2(tempGrid) ||
+                check3(tempGrid) ||
+                check4(tempGrid, iniGrid)
+              ) {
+                grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
+                return;
+              }
             }
           }
         }
@@ -645,12 +697,16 @@ function solution(input: string): string {
           for (const target of grid[y][x]) {
             const tempGrid = JSON.parse(JSON.stringify(grid));
             tempGrid[y][x] = [new Num(target.n, target.id)];
-            cycle(tempGrid, iniGrid, idToPos);
-            cycle(tempGrid, iniGrid, idToPos);
-            cycle(tempGrid, iniGrid, idToPos);
-            if (check1(tempGrid) || check2(tempGrid) || check3(tempGrid)) {
-              grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
-              return;
+            while (cycle(tempGrid, iniGrid, idToPos)) {
+              if (
+                check1(tempGrid) ||
+                check2(tempGrid) ||
+                check3(tempGrid) ||
+                check4(tempGrid, iniGrid)
+              ) {
+                grid[y][x] = grid[y][x].filter((xx) => xx.id !== target.id);
+                return;
+              }
             }
           }
         }
