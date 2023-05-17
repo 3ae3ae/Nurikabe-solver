@@ -46,21 +46,6 @@ const input = `3 4
 ..
 4.
 0 0`;
-// 24 14
-// 2....1.......1......2...
-// ........2...3....1......
-// .....1.......1..3......6
-// .1......5...............
-// ......4......1........3.
-// ...............7.7.3....
-// .....2..................
-// ..9.....................
-// .7.1...4.....2....1.....
-// ..........5.........1...
-// ...4.4.............2....
-// ....8.................7.
-// ......1......5....11....5
-// ........6.2.....5.......
 function solution(input) {
     class Num {
         static id = 1;
@@ -286,14 +271,12 @@ function solution(input) {
         function sol2(grid) {
             let bool = false;
             const sol2Grid = grid.map((a) => a.map(() => 0));
+            let count = grid.reduce((a, c, i, grid) => a + c.reduce((a, _, j) => a + (getId(i, j, grid) === 0 ? 1 : 0), 0), 0);
             for (let i = 0; i < grid.length; i++) {
                 for (let j = 0; j < grid[0].length; j++) {
                     const targetId = getId(i, j, grid);
                     if (targetId !== 0 || sol2Grid[i][j] === 1)
                         continue;
-                    const count = grid.reduce((a, c, i, grid) => a +
-                        c.reduce((a, _, j) => a + (getId(i, j, grid) === 0 ? 1 : 0), 0), 0);
-                    // count 수정 필요
                     if (getArea(i, j, grid) === count)
                         continue;
                     const q = new Queue([[i, j]]);
@@ -322,6 +305,7 @@ function solution(input) {
                         bool = true;
                         const [y, x] = around.entries()[0];
                         grid[y][x] = [new Num(0, 0)];
+                        count++;
                     }
                 }
             }
@@ -406,6 +390,7 @@ function solution(input) {
          */
         function sol4(grid) {
             let bool = false;
+            const sol4Map = new Map();
             for (let k = 0; k < grid.length; k++) {
                 for (let l = 0; l < grid[k].length; l++) {
                     if (grid[k][l].length === 1)
@@ -415,8 +400,11 @@ function solution(input) {
                         const targetN = target.n;
                         if (targetId === 0)
                             continue;
-                        const count1 = grid.reduce((a, c, i, grid) => a +
-                            c.reduce((a, _, j) => a + (getId(i, j, grid) === targetId ? 1 : 0), 0), 0);
+                        if (!sol4Map.has(target.id)) {
+                            const count = grid.reduce((a, c, i, grid) => a +
+                                c.reduce((a, _, j) => a + (getId(i, j, grid) === targetId ? 1 : 0), 0), 0);
+                            sol4Map.set(target.id, count);
+                        }
                         const q = new Queue([[k, l, targetN]]);
                         const visited = new Visited(k, l);
                         let count2 = 0;
@@ -436,7 +424,7 @@ function solution(input) {
                                 }
                             });
                         }
-                        if (count1 !== count2) {
+                        if (sol4Map.get(target.id) !== count2) {
                             bool = true;
                             grid[k][l] = grid[k][l].filter((xx) => xx.id !== targetId);
                         }
@@ -553,17 +541,16 @@ function solution(input) {
             return bool;
         }
         function cycle(grid, iniGrid) {
-            return (sol1(grid) ||
-                sol2(grid) ||
-                sol2Extra(grid) ||
+            return (sol6(grid) ||
                 sol5(grid) ||
-                sol6(grid) ||
+                sol1(grid) ||
+                sol2Extra(grid) ||
+                sol2(grid) ||
                 sol7(grid, iniGrid) ||
                 sol4(grid));
         }
         /**
          * Proof by contradiction
-         * @todo 수정 필요
          */
         function pByC(grid, iniGrid) {
             /**
